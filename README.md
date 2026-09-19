@@ -6,10 +6,9 @@
 
 统一的依赖管理（BOM）· 构建规范（Parent）· 通用组件（Commons）· 起步依赖（Starter）
 
-[![GitHub Actions](https://img.shields.io/github/actions/workflow/status/muyi-tech/muyi-framework/build-pull-request.yml?style=flat-square&label=CI)](https://github.com/muyi-tech/muyi-framework/actions)
+<a href="https://central.sonatype.com/artifact/io.github.muyi-tech.boot/muyi-boot-dependencies"><img src="https://img.shields.io/maven-central/v/io.github.muyi-tech.boot/muyi-boot-dependencies?color=green&style=flat-square" alt="Maven Central" /></a>
 [![codecov](https://codecov.io/gh/muyi-tech/muyi-framework/branch/main/graph/badge.svg)](https://codecov.io/gh/muyi-tech/muyi-framework)
 [![Java](https://img.shields.io/badge/Java-21-orange?style=flat-square)](https://adoptium.net/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen?style=flat-square)](https://spring.io/projects/spring-boot)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](LICENSE)
 
 </div>
