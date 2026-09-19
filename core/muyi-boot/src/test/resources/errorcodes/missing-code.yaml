@@ -1,0 +1,3 @@
+# 测试资源：缺 code，启动期 fail-fast
+error-codes:
+  - msg: "只有消息没有码"

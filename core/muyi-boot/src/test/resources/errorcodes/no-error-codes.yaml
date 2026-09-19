@@ -1,0 +1,2 @@
+# 测试资源：缺少 error-codes 键（跳过，不加载）
+other-key: value

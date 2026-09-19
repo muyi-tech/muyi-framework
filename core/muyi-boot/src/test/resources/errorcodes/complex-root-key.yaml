@@ -1,0 +1,3 @@
+# 根节点键不是标量（复杂键）：findValue 跳过后按缺 error-codes 处理（warn 跳过）
+? [complex, key]
+: value

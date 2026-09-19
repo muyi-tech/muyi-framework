@@ -1,0 +1,76 @@
+name: Deploy Docs
+
+# 文档站构建与部署（对标 spring-boot 的 docs-build/deploy-docs 骨架）：
+#
+#   push main（documentation/** 变更）→ mkdocs-material 渲染 → GitHub Pages
+#   正式发布后由 release.yml 的 trigger-docs job 通过 workflow_call 联动更新
+#
+# 多版本聚合（按 vX.Y 快照 + latest 重定向）为 P4 远期项，当前仅部署最新 main 文档。
+# 私有仓库无 Pages 权限：deploy job 经 if 条件自动跳过（build 照常跑，保留文档
+# 构建回归保护）；开源后条件自动放行，恢复部署。
+# 首次启用需在仓库 Settings → Pages 将 Source 设为 "GitHub Actions"。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'documentation/**'
+      - '.github/workflows/deploy-docs.yml'
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: "Build docs site"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: "Install mkdocs-material"
+        # 依赖清单见 documentation/muyi-boot-docs/requirements.txt（精确锁定
+        # 9.7.7，保证 strict 构建可重现；升级由 dependabot 提 PR）
+        run: pip install -r requirements.txt
+        working-directory: documentation/muyi-boot-docs
+
+      - name: "Build site (strict: nav 与链接不一致即失败)"
+        run: mkdocs build --strict --site-dir site
+        working-directory: documentation/muyi-boot-docs
+
+      # 不调用 actions/configure-pages：单版本站用不到 base_url，且私有仓库
+      # 无 Pages 权限时该步骤必然失败（曾致 Build docs job 整体红灯）。
+      - name: "Upload pages artifact"
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: documentation/muyi-boot-docs/site
+
+  deploy:
+    name: "Deploy to GitHub Pages"
+    needs: [build]
+    timeout-minutes: 10
+    # 私有仓库无 Pages 权限（免费计划硬限制），跳过部署避免红灯；
+    # workflow_call（release 联动）/dispatch/push 事件均带 repository 对象，条件通用。
+    if: github.event.repository.private != true
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: "Deploy"
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5

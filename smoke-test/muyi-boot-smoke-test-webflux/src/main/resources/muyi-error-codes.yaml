@@ -1,0 +1,8 @@
+# 示例业务错误码定义（FileErrorCodeProvider 加载，LAST_WINS 覆盖常量默认文案）。
+# messages 支持按语言标签定义多语言文案，响应端按请求 Accept-Language 解析。
+error-codes:
+  - code: 1001001000
+    msg: "用户 {} 不存在"
+    messages:
+      zh-CN: "用户 {} 不存在"
+      en-US: "User {} does not exist"

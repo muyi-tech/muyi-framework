@@ -1,0 +1,4 @@
+# 测试资源：error-codes 不是列表（非法）
+error-codes:
+  code: 1001001000
+  msg: "错误码必须是列表"

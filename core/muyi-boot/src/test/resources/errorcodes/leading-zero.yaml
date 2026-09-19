@@ -1,0 +1,4 @@
+# 测试资源：数字码带前导零（八进制歧义防护），fail-fast
+error-codes:
+  - code: 0500
+    msg: "前导零非法"

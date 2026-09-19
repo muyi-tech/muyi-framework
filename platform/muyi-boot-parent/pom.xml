@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.github.muyi-tech.boot</groupId>
+        <artifactId>muyi-boot-dependencies</artifactId>
+        <version>${revision}</version>
+        <relativePath>../muyi-boot-dependencies</relativePath>
+    </parent>
+    <artifactId>muyi-boot-parent</artifactId>
+    <packaging>pom</packaging>
+    <name>Muyi Boot Parent</name>
+    <description>Parent pom for business applications - inherit dependency management from the BOM and
+        build configuration from the aggregator (muyi-boot-build).</description>
+
+    <!-- 统一测试依赖：所有组件与业务项目继承，scope=test 不污染主依赖；版本由 BOM dependencyManagement 解析 -->
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!-- 业务应用打包插件：版本与 spring-boot.version 一致（该版本由 BOM 定义，经继承链解析）。
+                     对标 spring-boot-starter-parent：默认绑定 repackage 到 package 阶段，
+                     业务项目显式声明 spring-boot-maven-plugin 即零配置产出可执行 jar；
+                     框架自身模块不声明该插件，不受影响 -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot.version}</version>
+                    <executions>
+                        <execution>
+                            <id>repackage</id>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <!-- 代码格式校验已上移至聚合根（muyi-boot-build），经继承链全仓库统一生效 -->
+            <!-- 编译参数：release 21、UTF-8、保留方法参数名 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <release>${java.version}</release>
+                    <encoding>UTF-8</encoding>
+                    <parameters>true</parameters>
+                    <!-- 注解处理器显式声明：JDK 21+ 编译期警告消除，均不参与运行时。
+                         version 全部省略 → maven-compiler-plugin 3.13+ 经依赖管理解析
+                         （processor 均由上游 spring-boot-dependencies 4.1.1 持有版本） -->
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-autoconfigure-processor</artifactId>
+                        </path>
+                        <path>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-configuration-processor</artifactId>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <!-- 环境约束：Java 21+ / Maven 3.8.6+ -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforce-rules</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>[21,)</version>
+                                </requireJavaVersion>
+                                <requireMavenVersion>
+                                    <version>[3.8.6,)</version>
+                                </requireMavenVersion>
+                                <!-- 发布版本禁止 SNAPSHOT 依赖。onlyWhenRelease=true：SNAPSHOT 开发构建不检查；
+                                     CI 正式发布注入 -Drevision=x.y.z 时内部模块互依赖解析为 release 版可通过 -->
+                                <requireReleaseDeps>
+                                    <message>Release version must not have SNAPSHOT dependencies</message>
+                                    <onlyWhenRelease>true</onlyWhenRelease>
+                                </requireReleaseDeps>
+                                <!-- 全仓禁用 Lombok：公共 API 访问器/toString 已手写，
+                                     断绝其进入用户 classpath 的传递路径 -->
+                                <bannedDependencies>
+                                    <excludes>
+                                        <exclude>org.projectlombok:lombok</exclude>
+                                    </excludes>
+                                </bannedDependencies>
+                            </rules>
+                            <fail>true</fail>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- jar 清单元信息 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <addMavenDescriptor>false</addMavenDescriptor>
+                        <manifestEntries>
+                            <Implementation-Title>${project.name}</Implementation-Title>
+                            <Implementation-Version>${project.version}</Implementation-Version>
+                            <Built-By>Muyi Tech</Built-By>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            <!-- 源码 jar -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <configuration>
+                    <attach>true</attach>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- 单元测试：JUnit 5，稳定时区/无头模式 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- @{argLine} 延迟展开：jacoco prepare-agent 追加 -javaagent 至 argLine 属性
+                         （根 pom 已定义 -Xms/-Xmx，追加后同属性携带内存参数）。
+                         注意不可写成 "@{argLine} ${argLine}"：属性会被 jacoco 追加，双展开导致
+                         agent 挂载两次 + 内存参数重复，forked VM 启动异常 -->
+                    <argLine>@{argLine}</argLine>
+                    <includes>
+                        <include>**/*Test.java</include>
+                    </includes>
+                    <systemPropertyVariables>
+                        <java.awt.headless>true</java.awt.headless>
+                        <user.timezone>Asia/Shanghai</user.timezone>
+                    </systemPropertyVariables>
+                    <trimStackTrace>false</trimStackTrace>
+                    <runOrder>alphabetical</runOrder>
+                    <useFile>false</useFile>
+                    <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+                </configuration>
+            </plugin>
+            <!-- 单元测试覆盖率：mvn test 后生成 target/site/jacoco/index.html -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <phase>test</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- javadoc 生成 + 发布时附加 javadoc jar；-Dmaven.javadoc.skip=true 可跳过 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <doclint>all,-missing</doclint>
+                    <source>${java.version}</source>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <phase>package</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- 默认 deploy 动作跳过（发布统一走 release profile 的 central-publishing） -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <configuration>
+                    <skip>${maven.deploy.skip}</skip>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

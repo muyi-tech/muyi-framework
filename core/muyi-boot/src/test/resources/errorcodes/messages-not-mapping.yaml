@@ -1,0 +1,6 @@
+# 测试资源：messages 不是映射（非法——必须是语言标签 → 文案映射）
+error-codes:
+  - code: 1001001001
+    msg: "文案"
+    messages:
+      - zh-CN

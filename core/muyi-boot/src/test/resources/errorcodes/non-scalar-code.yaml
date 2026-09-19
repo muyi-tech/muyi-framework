@@ -1,0 +1,5 @@
+# 测试资源：code 值不是标量（非法——必须是标量值）
+error-codes:
+  - code:
+      nested: 1001001002
+    msg: "code 非标量"

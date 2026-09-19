@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 方式一：继承 muyi-boot-parent（推荐业务应用）
+         响应式示例：WebFlux 接入 Muyi Framework，与 muyi-boot-smoke-test-parent-inheritance（WebMVC）对称 -->
+    <parent>
+        <groupId>io.github.muyi-tech.boot</groupId>
+        <artifactId>muyi-boot-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.example.muyi</groupId>
+    <artifactId>muyi-boot-smoke-test-webflux</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <name>Muyi Boot Smoke Test - WebFlux</name>
+    <description>示例三：继承 muyi-boot-parent 接入 Muyi Framework 的响应式（WebFlux）应用</description>
+
+    <dependencies>
+        <!-- 响应式 Web 起步依赖（版本由 parent 继承的 BOM 统一管理）：
+             一个坐标聚合官方 webflux + validation starter 与 muyi-boot-webflux 异常处理模块 -->
+        <dependency>
+            <groupId>io.github.muyi-tech.boot</groupId>
+            <artifactId>muyi-boot-starter-webflux</artifactId>
+        </dependency>
+        <!-- 测试：聚合官方 starter-test、Boot 4 拆分的 spring-boot-starter-webflux-test 与 reactor-test -->
+        <dependency>
+            <groupId>io.github.muyi-tech.boot</groupId>
+            <artifactId>muyi-boot-starter-webflux-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <!-- 框架当前为 0.1.0-SNAPSHOT，需配置 Central 快照仓库；正式版发布后移除本段即可 -->
+    <repositories>
+        <repository>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <id>central-snapshots</id>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+        </repository>
+    </repositories>
+
+    <build>
+        <plugins>
+            <!-- 可执行 jar 打包；版本由 parent 的 pluginManagement 统一提供 -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

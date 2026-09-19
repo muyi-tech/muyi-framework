@@ -1,0 +1,4 @@
+# code 为空白字符串：与缺失同判（fail-fast）
+error-codes:
+  - code: ""
+    msg: 空白码不应被接受

@@ -1,0 +1,4 @@
+# 测试资源：字符串码非法（小写蛇形），fail-fast
+error-codes:
+  - code: wechat_api_error
+    msg: "小写非法"

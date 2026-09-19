@@ -1,0 +1,3 @@
+muyi:
+  error-code:
+    locations: classpath:muyi-error-codes.yaml

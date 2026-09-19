@@ -1,0 +1,44 @@
+name: Smoke Tests
+
+# 可复用冒烟 workflow（对标 spring-boot 的 RVT/verify 模式）：
+# 构建 examples 全部接入示例，验证"发布到本地仓库的框架构件能被业务应用正常消费"。
+# 由 build-pull-request.yml 与 ci.yml 通过 uses: ./.github/workflows/smoke-tests.yml 调用。
+
+on:
+  workflow_call:
+
+# 最小权限：可复用冒烟 workflow 只需检出与本地构建
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: "Examples Smoke Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: "Set up Build Environment"
+        uses: ./.github/actions/setup-build
+
+      - name: "Install framework to local repository"
+        run: mvn -B clean install -DskipTests
+
+      - name: "Smoke: muyi-boot-smoke-test-parent-inheritance"
+        run: mvn -B clean verify --file smoke-test/muyi-boot-smoke-test-parent-inheritance/pom.xml
+
+      - name: "Smoke: muyi-boot-smoke-test-bom-import"
+        run: mvn -B clean verify --file smoke-test/muyi-boot-smoke-test-bom-import/pom.xml
+
+      - name: "Smoke: muyi-boot-smoke-test-webflux"
+        run: mvn -B clean verify --file smoke-test/muyi-boot-smoke-test-webflux/pom.xml
+
+      - name: "Upload smoke test reports"
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: smoke-test-reports
+          path: smoke-test/**/target/surefire-reports/
+          retention-days: 7
+          if-no-files-found: ignore

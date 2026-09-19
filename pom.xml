@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.github.muyi-tech</groupId>
+    <artifactId>muyi-boot-build</artifactId>
+    <version>${revision}</version>
+    <packaging>pom</packaging>
+
+    <name>Muyi Framework Build</name>
+    <description>Aggregator pom for the Muyi Framework</description>
+    <url>https://github.com/muyi-tech/muyi-framework</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>keep simple</name>
+            <email>3132670669@qq.com</email>
+            <organization>Muyi Tech</organization>
+            <organizationUrl>https://github.com/muyi-tech</organizationUrl>
+        </developer>
+    </developers>
+
+    <modules>
+        <module>platform/muyi-boot-dependencies</module>
+        <module>platform/muyi-boot-parent</module>
+        <module>core/muyi-boot</module>
+        <module>module/muyi-commons-core</module>
+        <module>module/muyi-commons-spring</module>
+        <module>module/muyi-boot-webmvc</module>
+        <module>module/muyi-boot-webflux</module>
+        <module>starter/muyi-boot-starter</module>
+        <module>starter/muyi-boot-starter-webmvc</module>
+        <module>starter/muyi-boot-starter-webflux</module>
+        <module>starter/muyi-boot-starter-webmvc-test</module>
+        <module>starter/muyi-boot-starter-webflux-test</module>
+    </modules>
+
+    <scm>
+        <connection>scm:git:git://github.com/muyi-tech/muyi-framework.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/muyi-tech/muyi-framework.git</developerConnection>
+        <tag>HEAD</tag>
+        <url>https://github.com/muyi-tech/muyi-framework</url>
+    </scm>
+
+    <properties>
+        <revision>1.0.1-SNAPSHOT</revision>
+        <java.version>21</java.version>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- 通用运行参数 -->
+        <resource.delimiter>@</resource.delimiter>
+        <argLine>-Xms512m -Xmx1024m</argLine>
+        <maven.deploy.skip>false</maven.deploy.skip>
+
+        <!-- 版本权威：本仓库所有依赖/插件版本在此定义，BOM 与子模块继承使用。
+             注意：依赖版本（如 spring-boot.version）由 BOM（muyi-boot-dependencies）自身持有，
+             此处只定义构建/插件版本 -->
+        <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
+        <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
+        <maven-jar-plugin.version>3.5.1</maven-jar-plugin.version>
+        <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
+        <maven-surefire-plugin.version>3.6.0</maven-surefire-plugin.version>
+        <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
+        <versions-maven-plugin.version>2.22.0</versions-maven-plugin.version>
+        <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
+        <maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
+        <maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
+        <spotless-maven-plugin.version>3.10.2</spotless-maven-plugin.version>
+        <google-java-format.version>1.36.1</google-java-format.version>
+        <flatten-maven-plugin.version>1.8.0</flatten-maven-plugin.version>
+        <central-publishing-maven-plugin.version>0.11.0</central-publishing-maven-plugin.version>
+    </properties>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>com.diffplug.spotless</groupId>
+                    <artifactId>spotless-maven-plugin</artifactId>
+                    <version>${spotless-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>flatten-maven-plugin</artifactId>
+                    <version>${flatten-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven-compiler-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <version>${maven-enforcer-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>${maven-jar-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>${maven-source-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven-surefire-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>${maven-javadoc-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>versions-maven-plugin</artifactId>
+                    <version>${versions-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <version>${maven-gpg-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-deploy-plugin</artifactId>
+                    <version>${maven-deploy-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.sonatype.central</groupId>
+                    <artifactId>central-publishing-maven-plugin</artifactId>
+                    <version>${central-publishing-maven-plugin.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <!-- 代码格式校验：全 reactor 统一执行（mvn spotless:apply 可自动修复）。
+                 放聚合根而非 parent：覆盖根 pom/BOM 自身 pom.xml 的格式检查，
+                 子模块经继承链（build -> dependencies -> parent -> 聚合）全部继承；
+                 业务应用继承 parent 后经依赖链同样生效。 -->
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <configuration>
+                    <java>
+                        <removeUnusedImports/>
+                        <forbidWildcardImports/>
+                        <formatAnnotations/>
+                        <importOrder/>
+                        <googleJavaFormat>
+                            <version>${google-java-format.version}</version>
+                            <style>AOSP</style>
+                            <reflowLongStrings>true</reflowLongStrings>
+                            <formatJavadoc>false</formatJavadoc>
+                        </googleJavaFormat>
+                    </java>
+                    <pom>
+                        <includes>
+                            <include>pom.xml</include>
+                        </includes>
+                        <sortPom>
+                            <nrOfIndentSpace>4</nrOfIndentSpace>
+                        </sortPom>
+                    </pom>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>spotless-check</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <phase>validate</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- 统一 revision 版本，install/deploy 时展开。
+                 本插件的执行配置放在聚合根（而非 parent），因为 BOM（muyi-boot-dependencies）
+                 直接继承聚合根，同样需要 flatten 才能展开 ${revision} 发布。 -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                        <phase>process-resources</phase>
+                        <configuration>
+                            <updatePomFile>true</updatePomFile>
+                            <!-- 统一 resolveCiFriendliesOnly：发布 pom 保留 dependencyManagement/版本 property
+                                 （BOM 自包含可 import）与 parent 引用。parent 链可解析的前提是聚合模块
+                                 （muyi-boot-build）一并发布，故 release
+                                 profile 不做 excludeArtifacts 排除。不依赖插件默认值（默认是 oss，会裁剪 pom）。 -->
+                            <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>flatten-clean</id>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                        <phase>clean</phase>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- 发布到 Sonatype Central：mvn -Prelease clean deploy。
+             放在聚合根（而非 parent），因为 BOM（muyi-boot-dependencies）直接继承聚合根，
+             同样需要 gpg 签名 + central-publishing 才能完整发布。 -->
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <configuration>
+                            <!-- bestPractices：自动注入 batch、no-tty、pinentry-mode loopback、passphrase-fd 0 等参数，
+                                 解决 CI/无 tty 环境的 gpg 交互问题；passphrase 用环境变量 MAVEN_GPG_PASSPHRASE 提供
+                                 （maven-gpg-plugin 3.2.8+ 已废弃 settings.xml 的 server id=gpg passphrase） -->
+                            <bestPractices>true</bestPractices>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                                <phase>verify</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <!-- 显式化：默认 false = 上传+校验后需在 Central Portal 手动 Publish；
+                                 需要自动发布（如 CI）时执行 mvn -Prelease clean deploy -DautoPublish=true -->
+                            <autoPublish>false</autoPublish>
+                            <!-- 不做 excludeArtifacts：发布 pom 保留 parent 引用（resolveCiFriendliesOnly），
+                                 聚合模块（build/starters/commons）必须一并发布，消费者 parent 链才能解析 -->
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

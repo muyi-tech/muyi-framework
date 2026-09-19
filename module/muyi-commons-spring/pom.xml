@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.github.muyi-tech.boot</groupId>
+        <artifactId>muyi-boot-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../../platform/muyi-boot-parent</relativePath>
+    </parent>
+
+    <!-- commons 域保持发布历史坐标 io.github.muyi-tech（不随 parent 链变为 .boot），
+         否则 reactor 内无法与 BOM/依赖声明的坐标匹配，干净环境（CI）下解析失败 -->
+    <groupId>io.github.muyi-tech</groupId>
+    <artifactId>muyi-commons-spring</artifactId>
+    <name>Muyi Commons Spring</name>
+    <description>Spring-integrated utility classes</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.github.muyi-tech</groupId>
+            <artifactId>muyi-commons-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+        </dependency>
+        <!-- jspecify：公共 API 面 @Nullable 契约注解（TYPE_USE、CLASS 保留，运行时零成本）。
+             版本由 parent 链（muyi-boot-dependencies → spring-boot-dependencies）管理，与 Spring Framework 7 同轨；
+             compile 作用域使下游编译期/IDE 空安全分析可直接读取注解 -->
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate.validator</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish</groupId>
+            <artifactId>jakarta.el</artifactId>
+            <version>4.0.2</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

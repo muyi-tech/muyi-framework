@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 方式二：仅导入 BOM（已有父级时）
+         业务应用已有自己的父级（此处以 spring-boot-starter-parent 为例，实际可为公司内部 parent），
+         无法继承 muyi-boot-parent，通过 dependencyManagement import 方式接入 Muyi Framework BOM -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.1</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.example.muyi</groupId>
+    <artifactId>muyi-boot-smoke-test-bom-import</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <name>Muyi Boot Smoke Test - BOM Import</name>
+    <description>示例二：仅导入 muyi-boot-dependencies BOM 接入 Muyi Framework（已有父级时）</description>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- 导入 Muyi Framework BOM：统一管理框架组件与第三方依赖版本 -->
+            <dependency>
+                <groupId>io.github.muyi-tech.boot</groupId>
+                <artifactId>muyi-boot-dependencies</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- WebMVC 起步依赖（版本由上方 import 的 BOM 管理，无需显式声明）：
+             一个坐标聚合官方 webmvc + validation starter 与 muyi-boot-webmvc 异常处理模块 -->
+        <dependency>
+            <groupId>io.github.muyi-tech.boot</groupId>
+            <artifactId>muyi-boot-starter-webmvc</artifactId>
+        </dependency>
+        <!-- 测试：聚合官方 starter-test 与 Boot 4 拆分的 spring-boot-starter-webmvc-test -->
+        <dependency>
+            <groupId>io.github.muyi-tech.boot</groupId>
+            <artifactId>muyi-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <!-- 框架当前为 0.1.0-SNAPSHOT，需配置 Central 快照仓库；正式版发布后移除本段即可 -->
+    <repositories>
+        <repository>
+            <id>central-snapshots</id>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <build>
+        <plugins>
+            <!-- 可执行 jar 打包；版本由 spring-boot-starter-parent 管理 -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

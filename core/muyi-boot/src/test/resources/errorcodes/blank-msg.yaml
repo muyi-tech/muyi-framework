@@ -1,0 +1,4 @@
+# msg 为空白字符串：与缺失同判（fail-fast）
+error-codes:
+  - code: 1001
+    msg: ""

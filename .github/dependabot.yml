@@ -1,0 +1,59 @@
+# Dependabot 依赖更新策略
+# 文档：https://docs.github.com/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+version: 2
+
+updates:
+  # Maven 依赖（含多模块递归扫描）
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "amyaxy"
+    labels:
+      - "dependencies"
+    # 分组更新，减少 PR 噪音：
+    # Spring 全家桶一个 PR，Maven 插件一个 PR，其余单独提
+    groups:
+      spring:
+        patterns:
+          - "org.springframework*"
+          - "org.springframework.boot*"
+      maven-plugins:
+        patterns:
+          - "org.apache.maven.plugins*"
+          - "com.diffplug.spotless*"
+      # 版本单源：所有模块的 ${revision} 由根 pom 管理，
+      # Dependabot 会自动识别，无需特殊处理
+
+  # GitHub Actions 版本更新（ci.yml / codeql.yml 中的 action 引用）
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "amyaxy"
+    labels:
+      - "dependencies"
+      - "ci"
+
+  # 文档站 Python 依赖（mkdocs-material 等，兑现 deploy-docs.yml 中
+  # "升级由 dependabot 提 PR"的承诺；精确锁版本，PR 只改 requirements.txt）
+  - package-ecosystem: "pip"
+    directory: "/documentation/muyi-boot-docs"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "amyaxy"
+    labels:
+      - "dependencies"
+      - "documentation"

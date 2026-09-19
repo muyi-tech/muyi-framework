@@ -1,0 +1,5 @@
+# 测试资源：未知字段，fail-fast
+error-codes:
+  - code: 1001001001
+    msg: "正常消息"
+    desc: "多余字段"

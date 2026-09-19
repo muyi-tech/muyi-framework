@@ -1,0 +1,3 @@
+# msg 字段整体缺失：fail-fast
+error-codes:
+  - code: 1001

@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.github.muyi-tech</groupId>
+        <artifactId>muyi-boot-build</artifactId>
+        <version>${revision}</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+    <groupId>io.github.muyi-tech.boot</groupId>
+    <artifactId>muyi-boot-dependencies</artifactId>
+    <packaging>pom</packaging>
+    <name>Muyi Boot Dependencies</name>
+    <description>Bill of Materials - single source of truth for dependency versions</description>
+
+    <!-- 依赖版本：由 BOM 自身持有（对标 Spring Boot 官方 spring-boot-dependencies），
+         配合聚合根的 flatten resolveCiFriendliesOnly，发布后 BOM 自包含、可独立 import -->
+    <properties>
+        <spring-boot.version>4.1.1</spring-boot.version>
+
+        <!-- AI 相关：Spring AI / Spring AI Alibaba / AgentScope -->
+        <spring-ai.version>2.0.1</spring-ai.version>
+        <spring-ai-alibaba.version>2.0.0-M1.1</spring-ai-alibaba.version>
+        <agentscope.version>2.0.3</agentscope.version>
+
+        <commons-collections4.version>4.6.0</commons-collections4.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- 上游 BOM：统一管理 Spring/Jackson/Slf4j 等版本，版本号由本 BOM 定义 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- AI 相关上游 BOM：Spring AI / Spring AI Alibaba / AgentScope -->
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.cloud.ai</groupId>
+                <artifactId>spring-ai-alibaba-bom</artifactId>
+                <version>${spring-ai-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.cloud.ai</groupId>
+                <artifactId>spring-ai-alibaba-extensions-bom</artifactId>
+                <version>${spring-ai-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.agentscope</groupId>
+                <artifactId>agentscope-bom</artifactId>
+                <version>${agentscope.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.agentscope</groupId>
+                <artifactId>agentscope-dependencies-bom</artifactId>
+                <version>${agentscope.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Muyi Framework 组件版本声明：与聚合根一致（同一 ${revision}），BOM 发布后自包含 -->
+            <dependency>
+                <groupId>io.github.muyi-tech</groupId>
+                <artifactId>muyi-commons-core</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.muyi-tech</groupId>
+                <artifactId>muyi-commons-spring</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.muyi-tech.boot</groupId>
+                <artifactId>muyi-boot</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.muyi-tech.boot</groupId>
+                <artifactId>muyi-boot-starter</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.muyi-tech.boot</groupId>
+                <artifactId>muyi-boot-webmvc</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.muyi-tech.boot</groupId>
+                <artifactId>muyi-boot-webflux</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.muyi-tech.boot</groupId>
+                <artifactId>muyi-boot-starter-webmvc</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.muyi-tech.boot</groupId>
+                <artifactId>muyi-boot-starter-webflux</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.muyi-tech.boot</groupId>
+                <artifactId>muyi-boot-starter-webmvc-test</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.muyi-tech.boot</groupId>
+                <artifactId>muyi-boot-starter-webflux-test</artifactId>
+                <version>${revision}</version>
+            </dependency>
+
+            <!-- Apache Commons：lang3 由 Spring Boot BOM 管理；collections4 由本 BOM 自管 -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-collections4</artifactId>
+                <version>${commons-collections4.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>

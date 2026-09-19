@@ -1,0 +1,13 @@
+# 测试资源：正常加载样例（数字码 / 字符串码 / 多语言 / 全局码覆盖）
+error-codes:
+  - code: 1001001000
+    msg: "用户 {} 不存在"
+    messages:
+      zh-CN: "用户 {} 不存在"
+      en-US: "User {} does not exist"
+  - code: WECHAT_API_ERROR
+    msg: "微信接口调用失败: {}"
+  - code: 500
+    msg: "系统开小差了,请稍后重试"
+  - code: 0
+    msg: "成功"
