@@ -1,0 +1,52 @@
+name: Bug Report
+description: 报告使用 Muyi Framework 时遇到的问题
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您花时间报告 Bug！请先搜索[已有 Issues](https://github.com/muyi-tech/muyi-framework/issues?q=) 避免重复，
+        并确认您使用的是最新版本。问题报告越完整（最小复现 + 日志），定位越快。
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 清晰描述遇到的问题，包括**期望行为**与**实际行为**。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 最小复现代码或步骤（含关键 pom.xml 依赖配置）。
+      placeholder: |
+        1. 引入 'muyi-boot-starter-xxx'
+        2. 配置 '...'
+        3. 调用 '...'
+        4. 出现错误
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息
+      description: 相关组件版本与运行环境。
+      placeholder: |
+        - Muyi Framework: 0.1.0
+        - Spring Boot: 4.1.0
+        - JDK: 21
+        - OS: Windows 11 / Ubuntu 24.04
+        - 构建工具: Maven 3.9.9
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 相关日志
+      description: 错误堆栈或关键日志（截取相关片段即可）。
+      render: shell
+  - type: textarea
+    id: additional
+    attributes:
+      label: 补充信息
+      description: 截图、关联 Issue、临时规避方案等。

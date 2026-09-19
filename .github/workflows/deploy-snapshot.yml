@@ -1,0 +1,57 @@
+name: Deploy SNAPSHOT
+
+# main 分支推送的 SNAPSHOT 发布：由 ci.yml 全量验证通过后触发（workflow_run 监听 CI 结论），
+# 不再自行重复全量构建——一次 push 全量验证只跑一遍；ci.yml 任一红灯（license/双 OS 构建/smoke）
+# 则不发布。与 ci.yml 职责分离：CI 管质量门禁，本 workflow 只管发布，发布失败不影响 CI 徽章。
+# 手动触发（workflow_dispatch）时按 main 最新提交构建发布。
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-snapshot-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: "Deploy SNAPSHOT"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # workflow_run：仅当 CI 全绿才发布；workflow_dispatch：手动直接发布
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # workflow_run 触发时 github.sha 指向默认分支最新提交，
+          # 显式检出触发 CI 的提交，保证"验证过的那份代码"被发布；
+          # workflow_dispatch 时该值为空，checkout 回退默认（main 最新）
+          ref: ${{ github.event.workflow_run.head_sha || '' }}
+
+      - name: "Set up Build Environment"
+        uses: ./.github/actions/setup-build
+
+      - name: "Setup Maven settings"
+        env:
+          MAVEN_SETTINGS_BASE64: ${{ secrets.MAVEN_SETTINGS_BASE64 }}
+        run: |
+          mkdir -p ~/.m2
+          echo "${MAVEN_SETTINGS_BASE64}" | base64 -d > ~/.m2/settings.xml
+
+      - name: "Import GPG key"
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          echo "${GPG_PRIVATE_KEY}" | base64 -d | gpg --batch --import
+
+      - name: "Deploy SNAPSHOT"
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: mvn -B -Prelease clean deploy -DskipTests

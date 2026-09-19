@@ -1,0 +1,6 @@
+﻿# muyi-boot-docs 文档站构建依赖
+# 精确锁定当前最新稳定版，保证 strict 构建可重现；后续升级由 dependabot 提 PR
+mkdocs-material==9.7.7
+# 中文搜索分词（mkdocs.yml search.lang 含 zh 时必需）
+jieba==0.42.1
+

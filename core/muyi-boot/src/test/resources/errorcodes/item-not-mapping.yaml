@@ -1,0 +1,3 @@
+# 测试资源：error-codes 条目不是映射（非法——条目必须是键值映射）
+error-codes:
+  - just-a-string

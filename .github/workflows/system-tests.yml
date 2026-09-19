@@ -1,0 +1,54 @@
+name: System Tests
+
+# 部署系统测试（对标 spring-boot 的 system/deployment tests 独立 workflow）：
+# 把示例应用打成可执行 jar，以真实 JVM 进程（java -jar）启动，通过 HTTP 验证运行时行为
+# （统一响应包装、数据字典序列化、业务异常统一转换）——与 mock 型测试互补的最后一层验证。
+# main push 直接触发；PR 门经 build-pull-request.yml 的 workflow_call 复用本实现；
+# 亦可手动触发。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: system-tests-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  system-tests:
+    name: "Jar Deployment System Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: "Set up Build Environment"
+        uses: ./.github/actions/setup-build
+
+      - name: "Install framework to local repository"
+        run: mvn -B clean install -DskipTests
+
+      - name: "Package WebMVC example (executable jar)"
+        run: mvn -B clean install -DskipTests --file smoke-test/muyi-boot-smoke-test-parent-inheritance/pom.xml
+
+      - name: "Package WebFlux example (executable jar)"
+        run: mvn -B clean install -DskipTests --file smoke-test/muyi-boot-smoke-test-webflux/pom.xml
+
+      - name: "Run system tests"
+        run: mvn -B verify --file system-test/muyi-boot-deployment-system-tests/pom.xml
+
+      - name: "Upload system test reports"
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: system-test-reports
+          path: |
+            system-test/muyi-boot-deployment-system-tests/target/surefire-reports/
+            system-test/muyi-boot-deployment-system-tests/target/system-test-logs/
+          retention-days: 7
+          if-no-files-found: ignore

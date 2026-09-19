@@ -1,0 +1,149 @@
+name: Quality Gate (reusable)
+
+# 质量门禁单源实现：license + 双 OS 构建测试（spotless/javadoc/sources 校验内嵌）+ 冒烟。
+# 由 ci.yml（main push）与 build-pull-request.yml（PR）调用，避免两份逐字拷贝漂移
+# （历史教训：find 校验豁免等修复曾需人肉同步多处）。
+# 触发器/concurrency/系统测试编排留在各调用方（workflow 属性）；
+# Codecov 语义按 codecov-mode 输入分级。
+
+on:
+  workflow_call:
+    inputs:
+      codecov-mode:
+        description: "push=main 尽力而为 | pr=内部 PR 严格/fork 尽力而为"
+        required: true
+        type: string
+      artifact-suffix:
+        description: "失败时上传的测试报告构件名后缀（区分 ci/pr，避免同名冲突）"
+        required: false
+        type: string
+        default: ci
+    secrets:
+      # 最小权限收敛：调用方显式传入（替代 secrets: inherit），本 workflow 只用这一个。
+      # fork PR 无此 secret，求值为空 → codecov 自动 tokenless，行为不变。
+      CODECOV_TOKEN:
+        description: "Codecov 上传 token"
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  license:
+    name: "Check License"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: "Check License"
+        uses: apache/skywalking-eyes@a196742f472feaffafea537ce5a2a4c3c53a8de4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "Check Dependencies' License"
+        uses: apache/skywalking-eyes/dependency@ab3d1fe50d23f9c82eff489297167e2dde8ba6cb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          config: .licenserc.yaml
+          mode: check
+
+  build:
+    name: "Build on ${{ matrix.os }}"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: "Set up Build Environment"
+        uses: ./.github/actions/setup-build
+
+      - name: "Build and Test"
+        run: mvn -B -T1 clean verify
+
+      - name: "Verify javadoc & sources jars"
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          missing=0
+          while IFS= read -r f; do
+            base="${f%.jar}"
+            if [ ! -f "${base}-sources.jar" ]; then
+              echo "::error::Missing sources jar for ${f}"
+              missing=1
+            fi
+            # starter-* 门面 jar 对标官方空 jar 形态（MANIFEST+LICENSE+NOTICE，零 class）：
+            # sources 必有（license 资源随附），javadoc 豁免——与官方发布物逐字节同构
+            case "$f" in
+              ./starter/*) continue ;;
+            esac
+            if [ ! -f "${base}-javadoc.jar" ]; then
+              echo "::error::Missing javadoc jar for ${f}"
+              missing=1
+            fi
+          done < <(find . -path "*/target/*.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar")
+          exit $missing
+
+      - name: "Upload test reports"
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: test-reports-${{ matrix.os }}-${{ inputs.artifact-suffix }}
+          path: |
+            **/target/surefire-reports/
+            **/target/site/jacoco/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      # main push：Codecov 服务抖动不阻断发布链路（SNAPSHOT 由 workflow_run 把关）
+      - name: "Upload coverage to Codecov (push)"
+        if: runner.os == 'Linux' && inputs.codecov-mode == 'push'
+        uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45 # v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+          verbose: true
+
+      # PR：fork 运行拿不到 secrets，token 求值为空自动走 tokenless（公共上游仓库官方支持）；
+      # fail 严格度按来源分级：内部 PR 上传失败必红，fork 尽力而为不阻断贡献流程
+      - name: "Upload coverage to Codecov (PR)"
+        if: runner.os == 'Linux' && inputs.codecov-mode == 'pr'
+        uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45 # v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          # 显式绑定 PR 号：覆盖率归属到 PR 所在分支，而不是落到 main 上
+          pr: ${{ github.event.pull_request.number }}
+          fail_ci_if_error: ${{ github.event.pull_request.head.repo.fork == false }}
+          verbose: true
+
+  smoke:
+    name: "Smoke Tests"
+    needs: [license, build]
+    uses: ./.github/workflows/smoke-tests.yml
+
+  docs:
+    name: "Docs strict build"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: "Install mkdocs-material"
+        # 与 deploy-docs.yml 同源 requirements.txt（精确锁定 9.7.7）：
+        # PR 门禁与发布部署用同一份依赖清单构建，防配置漂移
+        run: pip install -r requirements.txt
+        working-directory: documentation/muyi-boot-docs
+
+      - name: "Build site (strict: nav 与链接不一致即失败)"
+        run: mkdocs build --strict --site-dir site
+        working-directory: documentation/muyi-boot-docs

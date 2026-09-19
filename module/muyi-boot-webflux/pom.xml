@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.github.muyi-tech.boot</groupId>
+        <artifactId>muyi-boot-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../../platform/muyi-boot-parent</relativePath>
+    </parent>
+    <artifactId>muyi-boot-webflux</artifactId>
+    <name>Muyi Boot WebFlux</name>
+    <description>WebFlux reactive exception handling module: ReactiveCoreExceptionHandler, ReactiveModuleExceptionHandler, MuyiNotFoundWebExceptionHandler and auto-configuration</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.github.muyi-tech.boot</groupId>
+            <artifactId>muyi-boot</artifactId>
+        </dependency>
+        <!-- 以下 Web 栈依赖全部 optional（官方 back-off 设计）：编译期需要；
+             运行期由空 starter muyi-boot-starter-webflux 聚合官方 starter 提供 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webflux</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- servlet-api（仅测试）：WebApplicationContextRunner 创建 servlet 容器上下文所需，
+             用于验证响应式自动配置在 servlet 应用中 back off -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

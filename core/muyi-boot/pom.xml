@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 核心本体(对标 spring-boot 本体即无后缀 artifactId):
+         承载 boot 域共享代码——异常处理器支撑接口 ExceptionHandlerSupport。
+         类自原 muyi-boot-starter 迁入(包名不变),muyi-boot-starter 转为纯门面。 -->
+    <parent>
+        <groupId>io.github.muyi-tech.boot</groupId>
+        <artifactId>muyi-boot-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../../platform/muyi-boot-parent</relativePath>
+    </parent>
+
+    <groupId>io.github.muyi-tech.boot</groupId>
+    <artifactId>muyi-boot</artifactId>
+    <name>Muyi Boot</name>
+    <description>Muyi Framework core: shared exception-handler support (ExceptionHandlerSupport), no web stack dependencies</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.muyi-tech</groupId>
+            <artifactId>muyi-commons-spring</artifactId>
+        </dependency>
+        <!-- jspecify：公共 API 面 @Nullable 契约注解（TYPE_USE、CLASS 保留，运行时零成本）。
+             版本由 parent 链（muyi-boot-dependencies → spring-boot-dependencies）管理，与 Spring Framework 7 同轨；
+             compile 作用域使下游编译期/IDE 空安全分析可直接读取注解 -->
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <!-- 测试专用：ErrorCodeAutoConfiguration 装配测试需要 ApplicationContextRunner
+             （版本由 muyi-boot-dependencies → spring-boot-dependencies 管理） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

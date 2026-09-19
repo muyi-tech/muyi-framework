@@ -1,0 +1,24 @@
+name: 'Setup Muyi Build Environment'
+description: >-
+  Shared build setup for all workflows: Temurin JDK + Maven dependency cache
+  + MAVEN_OPTS. Single source of truth, mirrors spring-boot's .github/actions/setup.
+
+inputs:
+  java-version:
+    description: 'JDK major version to install'
+    required: false
+    default: '21'
+
+runs:
+  using: composite
+  steps:
+    - name: 'Set up JDK'
+      uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+      with:
+        java-version: ${{ inputs.java-version }}
+        distribution: 'temurin'
+        cache: 'maven'
+
+    - name: 'Configure MAVEN_OPTS'
+      shell: bash
+      run: echo "MAVEN_OPTS=-Dhttps.protocols=TLSv1.2 -Dmaven.artifact.threads=10" >> "$GITHUB_ENV"

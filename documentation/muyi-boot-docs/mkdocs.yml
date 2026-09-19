@@ -1,0 +1,58 @@
+site_name: Muyi Framework
+site_description: 基于 Spring Boot 4 / Java 21 的企业级开发框架
+site_url: https://muyi-tech.github.io/muyi-framework/
+repo_url: https://github.com/muyi-tech/muyi-framework
+repo_name: muyi-tech/muyi-framework
+
+theme:
+  name: material
+  language: zh
+  palette:
+    # 自动适配系统明暗
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: 切换到浅色模式
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: 切换到深色模式
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: 跟随系统
+  features:
+    - content.code.copy
+    - navigation.expand
+    - navigation.footer
+    - navigation.instant
+    - navigation.top
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - 首页: index.md
+  - 接入指南: getting-started.md
+  - 异常处理指南: exception-handling.md
+  - 错误码分配表: error-codes.md
+  - 错误码与国际化: i18n.md
+  - 版本与发布: versioning.md
+
+plugins:
+  - search:
+      lang:
+        - en
+        - zh
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - tables
+  - toc:
+      permalink: true

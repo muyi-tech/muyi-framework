@@ -1,0 +1,54 @@
+name: Build Pull Request
+
+# PR 专用质量门禁（实现单源见 _quality-gate.yml）：只测试，不发布。
+# 对标 spring-boot 的 build-pull-request.yml —— 贡献者改动只验证质量，不触碰发布链路。
+
+on:
+  pull_request:
+    branches: [main]
+
+# 同一 PR 的 force-push 只保留最新一次运行，旧排队立即取消，双 OS 矩阵不重复烧
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+# 最小权限：本 workflow 只读检出与构建测试，不写仓库
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: "Quality Gate"
+    uses: ./.github/workflows/_quality-gate.yml
+    # 最小权限收敛：不再 secrets: inherit，只显式传 quality-gate 需要的 CODECOV_TOKEN。
+    # 内部 PR 严格模式（fail_ci_if_error）靠它上传；fork PR 无此 secret，求值为空 →
+    # codecov 自动走 tokenless（公共上游仓库官方支持），行为与 inherit 一致，不阻断贡献流程。
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    with:
+      codecov-mode: pr
+      artifact-suffix: pr
+
+  # 部署系统测试进 PR 门：fat-jar 真实进程回归不再只等合并后暴露
+  # （main push 由独立 system-tests.yml 承担；此处经 workflow_call 复用同一实现）
+  system:
+    name: "System Tests"
+    needs: [quality]
+    uses: ./.github/workflows/system-tests.yml
+
+  # 供应链审查：扫描本 PR 引入的依赖变更，命中高危漏洞即拦截（fail-on-severity: high）。
+  # 私有仓库未启用 GHAS 时该 action 会失败，故按可见性自动跳过（与 codeql.yml 同款门）；
+  # 开源后条件自动放行。
+  dependency-review:
+    name: "Dependency Review"
+    if: github.event.repository.private != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/dependency-review-action@e7aeea1772ec01da74cafda11c5caa463520ca59 # v3
+        with:
+          fail-on-severity: high

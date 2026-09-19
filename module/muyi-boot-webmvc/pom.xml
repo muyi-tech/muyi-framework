@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.github.muyi-tech.boot</groupId>
+        <artifactId>muyi-boot-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../../platform/muyi-boot-parent</relativePath>
+    </parent>
+    <artifactId>muyi-boot-webmvc</artifactId>
+    <name>Muyi Boot WebMVC</name>
+    <description>WebMVC exception handling module: CoreExceptionHandler, ModuleExceptionHandler and auto-configuration</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.github.muyi-tech.boot</groupId>
+            <artifactId>muyi-boot</artifactId>
+        </dependency>
+        <!-- 以下 Web 栈依赖全部 optional（官方 back-off 设计）：编译期需要；
+             运行期由空 starter muyi-boot-starter-webmvc 聚合官方 starter 提供 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

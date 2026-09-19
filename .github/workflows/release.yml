@@ -1,0 +1,502 @@
+name: Release
+
+# tag 触发的正式版发布，三段式流水线（对标 spring-boot release.yml 的 stage → verify → promote）：
+#
+#   ① stage   全量测试 + 把签名构件 install 进隔离 staging-m2，组装 staging-repo（本地目录仓库，
+#             仅含 io/github/muyi-tech 自有构件，等价 SB 的 Artifactory staging：不触碰 Central）
+#   ② verify  断言 13 构件完整件套（真源码 jar = main/sources/javadoc/pom + 4×.asc；
+#             门面 jar ×5 = main+sources+2×.asc + pom 对（官方同款空 jar，javadoc 豁免）；
+#             pom 构件 = pom + .asc），
+#             用隔离本地仓库仅从 staging-repo 解析全部构件（证明发布物完整可消费），
+#             并卡 maven-central environment 人工批准门（需在仓库 Settings → Environments 配置）
+#   ③ publish 批准后把 **verify 通过的同一份 staging-repo** 打成 bundle，经 Central
+#             Publisher Portal 上传 API 直传（publishingType=AUTOMATIC，轮询至 PUBLISHED）
+#      ├─ github-release  自动创建 GitHub Release（--generate-notes）
+#      │    └─ trigger-docs  workflow_call 联动 deploy-docs.yml 更新文档站
+#      └─ bump-revision   main 分支 <revision> 与 examples 硬编码版本自动 bump 到下一个开发版
+#
+# 与 SB 的差异：SB 用 Artifactory staging + promote；Central Portal 提供 bundle 直传 API，
+# 故 publish 零重建——上传的字节与 verify 消费的字节严格同一（verified == published）。
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  stage:
+    name: "Stage (build & staging repo)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: "Set up Build Environment"
+        uses: ./.github/actions/setup-build
+
+      - name: "Extract version from tag"
+        id: version
+        run: |
+          # 拒绝畸形 tag：版本号必须是严格 semver（tag glob 的 * 允许空格/引号等注入字符）
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag '${GITHUB_REF_NAME}' 不符合 v<MAJOR>.<MINOR>.<PATCH>，拒绝发布"
+            exit 1
+          fi
+          VERSION="${GITHUB_REF_NAME#v}"
+          # 版本对账：tag 必须等于本 commit 上 pom <revision> 去掉 -SNAPSHOT 后缀
+          # （防误发/抢发：没有对账时任意 tag 配任意 main 代码都能发任意版本）
+          POM="$(sed -n 's/.*<revision>\(.*\)<\/revision>.*/\1/p' pom.xml | head -1 | tr -d '[:space:]')"
+          if [ "${POM%-SNAPSHOT}" != "${VERSION}" ]; then
+            echo "::error::Tag v${VERSION} 与 pom revision ${POM} 不匹配（期望 tag v${POM%-SNAPSHOT}）"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+      - name: "Build and Test"
+        run: mvn -B -T1 clean verify
+
+      - name: "Import GPG signing key"
+        env:
+          # secret 形态：gpg --armor --export-secret-keys 的 base64(-w0)，见 adocs/github-setup-guide.md §1
+          GPG_PRIVATE_KEY_B64: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          # 全新 runner 的 gpg keyring 为空：签名前必须导入发布私钥，
+          # 否则 maven-gpg-plugin 以 Exit code 2（No secret key）失败
+          test -n "${GPG_PRIVATE_KEY_B64}" || { echo "::error::GPG_PRIVATE_KEY secret 未配置（Settings → Secrets → Actions）"; exit 1; }
+          echo "${GPG_PRIVATE_KEY_B64}" | base64 -d | gpg --batch --import
+          # 导入后 ownertrust 丢失（未知），签名虽不依赖 trust，置 ultimate 消除警告。
+          # 注意：ownertrust 行必须是完整 40 位指纹（fpr 记录第 10 字段）。
+          # GnuPG ≥ 2.4（ubuntu-latest/24.04 自带 2.4.4）的 --import-ownertrust 严格校验
+          # 指纹，16 位 long key id（sec 记录第 5 字段）会报
+          # "gpg: error in '[stdin]': invalid fingerprint" 退出码 2
+          FPR="$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')"
+          test -n "${FPR}" || { echo "::error::未能从 keyring 提取指纹"; exit 1; }
+          printf '%s:6:\n' "${FPR}" | gpg --batch --import-ownertrust
+          echo "Imported signing key: ${FPR}"
+      - name: "Build signed artifacts into isolated local repo"
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          # 经 env 传值而非 ${{ }} 直接插值，避免 tag 内容注入 shell
+          REVISION: ${{ steps.version.outputs.version }}
+        # 必须用块标量（|）：plain 标量会被 YAML 折叠换行，bash 的 \<换行> 续行符
+        # 变成行内 \ + 空格，Maven 收到带前导空格的 " -Drevision=..." 直接报
+        # Unknown lifecycle phase（CI 实锤过的坑）
+        run: |
+          mvn -B -Prelease clean install -DskipTests \
+              -Drevision="${REVISION}" \
+              -Dmaven.repo.local="${GITHUB_WORKSPACE}/staging-m2"
+      - name: "Assemble staging repository"
+        run: |
+          set -euo pipefail
+          # 只拷自有坐标：三方依赖（io.netty、org.springframework 等）不得混入发布 bundle
+          mkdir -p staging-repo/io/github
+          cp -r staging-m2/io/github/muyi-tech staging-repo/io/github/
+          # 剔除 Maven 本地仓库簿记文件——它们不是发布构件。尤其 maven-metadata-local.xml
+          # 落在 artifactId 目录（版本目录上一层，那层没有 .pom），会让 Central 校验器把
+          # 该目录判成“有 content 却无 .pom” → 整包 FAILED：
+          #   "Bundle has content that does NOT have a .pom file: <所有 artifactId 目录>"
+          find staging-repo \( -name '_remote.repositories' \
+              -o -name 'maven-metadata-local.xml' \
+              -o -name 'resolver-status.properties' \
+              -o -name '*.lastUpdated' \
+              -o -name 'maven-metadata-central*.xml' \) -delete
+          # 断言簿记文件已清空，杜绝回归
+          leftover="$(find staging-repo \( -name '_remote.repositories' -o -name 'maven-metadata-local.xml' -o -name 'resolver-status.properties' \) | wc -l)"
+          echo "bookkeeping leftovers: ${leftover}"
+          test "${leftover}" = 0 || { echo "::error::staging-repo 仍残留本地仓库簿记文件，拒绝发布"; exit 1; }
+          echo "Staged artifacts:"
+          find staging-repo -type f -name "*.jar" | wc -l
+          find staging-repo -type f -name "*.pom" | wc -l
+      - name: "Verify artifact completeness (dynamic, derived from root pom)"
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          ROOT="staging-repo/io/github/muyi-tech"
+          fail=0
+          # ── 期望构件集合：从根 pom 动态派生，不再硬编码 artifactId 清单。
+          #    = <modules> 各路径末段目录名（约定 目录名==artifactId，本仓库全部满足）
+          #      + 聚合根自身 artifactId（pom.xml 首个 <artifactId>，即 muyi-boot-build）。
+          #    新增/删除模块只改 pom.xml，本校验自动跟随；若将来出现“目录名≠artifactId”
+          #    的模块，需把 mods 的推导改成读取各模块 pom 的 <artifactId>。
+          mods="$(sed -n 's:.*<module>\(.*\)</module>.*:\1:p' pom.xml | sed 's:/*$::; s:.*/::')"
+          rootid="$(sed -n 's:.*<artifactId>\(.*\)</artifactId>.*:\1:p' pom.xml | head -1 | tr -d '[:space:]')"
+          expected="$(printf '%s\n%s\n' "$mods" "$rootid" | sed '/^$/d' | sort -u)"
+          # ── 实际构件集合：staging-repo 中所有 <artifactId>/<VERSION> 版本目录的 artifactId。
+          actual="$(find "$ROOT" -type d -name "$VERSION" -exec dirname {} \; | xargs -r -n1 basename | sort -u)"
+          echo "expected artifacts ($(printf '%s\n' "$expected" | grep -c .)):"; printf '%s\n' "$expected" | sed 's/^/  /'
+          echo "actual artifacts ($(printf '%s\n' "$actual" | grep -c .)):";   printf '%s\n' "$actual"   | sed 's/^/  /'
+          missing="$(comm -23 <(printf '%s\n' "$expected") <(printf '%s\n' "$actual"))"
+          extra="$(comm -13 <(printf '%s\n' "$expected") <(printf '%s\n' "$actual"))"
+          [ -z "$missing" ] || { echo "::error::staging-repo 缺少根 pom 声明的构件: $(echo $missing)"; fail=1; }
+          [ -z "$extra" ]   || { echo "::error::staging-repo 出现根 pom <modules> 未声明的构件: $(echo $extra)（新模块须先加入根 pom）"; fail=1; }
+          # ── 结构不变量：逐个版本目录校验文件套完整（签名/源码/javadoc），自动覆盖任意模块数。
+          #    门面 starter（artifactId 以 muyi-boot-starter 开头）javadoc 豁免——官方同款空 jar 形态，
+          #    Central “sources 或 javadoc 二选一”合规线由 sources 满足。
+          need() { [ -f "$1" ] || { echo "::error::Missing $1"; fail=1; }; }
+          while IFS= read -r vdir; do
+            art="$(basename "$(dirname "$vdir")")"
+            base="$vdir/$art-$VERSION"
+            need "$base.pom"; need "$base.pom.asc"        # 所有构件必备 pom + 签名
+            if [ -f "$base.jar" ]; then                    # jar 构件（非 pom-only）
+              need "$base.jar.asc"
+              need "$base-sources.jar"; need "$base-sources.jar.asc"
+              case "$art" in
+                muyi-boot-starter*) : ;;                   # 门面：javadoc 豁免
+                *) need "$base-javadoc.jar"; need "$base-javadoc.jar.asc" ;;
+              esac
+            fi
+          done < <(find "$ROOT" -type d -name "$VERSION")
+          # 兜底：每个 .jar/.pom 都必须有同名 .asc（release profile 全量签名）
+          while IFS= read -r f; do
+            need "$f.asc"
+          done < <(find "$ROOT" -type f \( -name '*.jar' -o -name '*.pom' \))
+          test "$fail" = 0 || { echo "::error::构件完整性校验未通过"; exit 1; }
+          echo "✅ 构件完整性校验通过（$(printf '%s\n' "$actual" | grep -c .) 个 artifactId）"
+      - name: "Upload staged repository"
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: staging-repo
+          path: staging-repo
+          retention-days: 7
+          if-no-files-found: error
+
+  verify:
+    name: "Verify staged repository"
+    needs: [stage]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # 人工批准门：仓库 Settings → Environments 创建 maven-central 并启用
+    # Required reviewers 后，此 job 会暂停等待维护者批准后继续
+    environment: maven-central
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: "Set up Build Environment"
+        uses: ./.github/actions/setup-build
+
+      - name: "Download staged repository"
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: staging-repo
+          path: staging-repo
+
+      - name: "Resolve all artifacts from staging repo only"
+        env:
+          VERSION: ${{ needs.stage.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p consumer
+          REPO_URL="file://${GITHUB_WORKSPACE}/staging-repo"
+          # 消费方 pom 的依赖清单从 staging-repo 动态派生，不再硬编码：
+          #   groupId = 版本目录上两级路径（去 staging-repo/ 前缀，/ → .）
+          #   dep     = 凡产出 jar 的构件（版本留给 BOM 管理，故不写 <version>）
+          #   BOM     = artifactId 以 -dependencies 结尾者，作 import 统一管理版本
+          # 新增模块自动纳入解析验证；若 BOM 漏管某模块，dependency:resolve 会失败（正向信号）。
+          bom_xml=""
+          deps_xml=""
+          while IFS= read -r vdir; do
+            artdir="$(dirname "$vdir")"
+            art="$(basename "$artdir")"
+            gid="$(dirname "$artdir")"; gid="${gid#staging-repo/}"; gid="${gid//\//.}"
+            case "$art" in
+              *-dependencies)
+                bom_xml="${bom_xml}        <dependency><groupId>${gid}</groupId><artifactId>${art}</artifactId><version>${VERSION}</version><type>pom</type><scope>import</scope></dependency>"$'\n' ;;
+            esac
+            if [ -f "${vdir}/${art}-${VERSION}.jar" ]; then
+              deps_xml="${deps_xml}        <dependency><groupId>${gid}</groupId><artifactId>${art}</artifactId></dependency>"$'\n'
+            fi
+          done < <(find staging-repo -type d -name "$VERSION" | sort)
+          test -n "$bom_xml"  || { echo "::error::未发现 BOM（*-dependencies）构件，无法做版本管理导入"; exit 1; }
+          test -n "$deps_xml" || { echo "::error::未发现任何 jar 构件可消费"; exit 1; }
+          # 非引号 heredoc（<<EOF）：需要展开 ${bom_xml}/${deps_xml}/${REPO_URL}/${VERSION}；
+          # XML 骨架内无其它 $ 或反引号，展开安全。
+          cat > consumer/pom.xml <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <project xmlns="http://maven.apache.org/POM/4.0.0"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+            <modelVersion>4.0.0</modelVersion>
+            <groupId>io.github.muyi-tech</groupId>
+            <artifactId>release-verify-consumer</artifactId>
+            <version>1.0.0</version>
+            <packaging>pom</packaging>
+            <dependencyManagement>
+              <dependencies>
+          ${bom_xml}              </dependencies>
+            </dependencyManagement>
+            <dependencies>
+          ${deps_xml}            </dependencies>
+            <repositories>
+              <repository>
+                <id>staged-repo</id>
+                <url>${REPO_URL}</url>
+                <releases><enabled>true</enabled></releases>
+                <snapshots><enabled>false</enabled></snapshots>
+              </repository>
+            </repositories>
+          </project>
+          EOF
+          echo "=== generated consumer/pom.xml ==="; cat consumer/pom.xml
+          # 隔离本地仓库：强制本框架构件只能从 staging-repo 解析；传递依赖（Spring Boot 等）走 Central
+          mvn -B -f consumer/pom.xml -Dmaven.repo.local="${GITHUB_WORKSPACE}/verify-m2" dependency:resolve
+  publish:
+    name: "Publish verified bundle to Maven Central"
+    # stage 需显式列入 needs：publish 引用 needs.stage.outputs.version，
+    # 仅靠 verify 的传递依赖拿不到 stage 的 needs 上下文（outputs 取值恒为空）
+    needs: [stage, verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      VERSION: ${{ needs.stage.outputs.version }}
+    steps:
+      - name: "Download verified staged repository"
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: staging-repo
+          path: staging-repo
+
+      - name: "Build publishing bundle"
+        run: |
+          set -euo pipefail
+          cd staging-repo
+          # Central 校验要求每个文件配 .md5/.sha1 摘要（install 通常已随附，缺失时补生成；
+          # 摘要文件内容约定为纯 hex digest）
+          find . -type f \( -name '*.jar' -o -name '*.pom' -o -name '*.asc' \) -print0 \
+            | while IFS= read -r -d '' f; do
+                [ -s "${f}.md5" ] || md5sum -- "${f}" | cut -d' ' -f1 > "${f}.md5"
+                [ -s "${f}.sha1" ] || sha1sum -- "${f}" | cut -d' ' -f1 > "${f}.sha1"
+              done
+          zip -9qr ../central-bundle.zip io
+          cd ..
+          # 上传前对 zip 实体做 ground-truth 自检：把 Central 侧不透明的
+          # “Bundle has content that does NOT have a .pom file” 转成本地精确报错，并拦截坏包。
+          echo "=== bundle .pom 清单 ==="
+          unzip -Z1 central-bundle.zip | grep -E '\.pom$' | sort || true
+          echo "pom count: $(unzip -Z1 central-bundle.zip | grep -cE '\.pom$')"
+          echo "jar count: $(unzip -Z1 central-bundle.zip | grep -cE '\.jar$')"
+          fail=0
+          while IFS= read -r d; do
+            [ -n "$d" ] || continue
+            if ! unzip -Z1 central-bundle.zip | grep -q "^${d}/[^/]*\.pom$"; then
+              echo "::error::bundle 中版本目录缺 .pom: $d"
+              unzip -Z1 central-bundle.zip | grep "^${d}/" | sed 's/^/    /' || true
+              fail=1
+            fi
+          done < <(unzip -Z1 central-bundle.zip | grep -E '\.(jar|pom)$' | sed -E 's|/[^/]+$||' | sort -u)
+          [ "${fail}" = 0 ] || { echo "::error::bundle 自检未通过（存在缺 .pom 的构件目录），拒绝上传"; exit 1; }
+          echo "Bundle contents: $(unzip -l central-bundle.zip | tail -1)"
+      - name: "Upload bundle to Central Publisher Portal and wait"
+        env:
+          MAVEN_SETTINGS_BASE64: ${{ secrets.MAVEN_SETTINGS_BASE64 }}
+          DEPLOYMENT_NAME: muyi-framework-${{ needs.stage.outputs.version }}
+          # 轮询总预算（分钟）：Central PUBLISHING→PUBLISHED 延迟不可控，放宽窗口并配合退避。
+          PUBLISH_TIMEOUT_MIN: "60"
+          # 到窗口仍未 PUBLISHED 时是否判失败：默认 false=仅告警不失败（校验已过、会自动发布，
+          # 不拖红下游）；要“必须确认到 PUBLISHED 才算成功”改成 true。
+          FAIL_ON_TIMEOUT: "false"
+        run: |
+          set -euo pipefail
+          # 与 mvn deploy 同源凭证：从 settings.xml 提取 central User Token（bearer 形态）
+          # 关键修正：settings.xml 带 Maven 默认命名空间，ElementTree 解析出的标签是
+          # {http://maven.apache.org/SETTINGS/1.0.0}server，root.iter("server") /
+          # findtext("id") 恒不命中 → BEARER 取空 → 误报“未找到 central 凭据”。
+          # 故按 local-name 剥离命名空间匹配；若 server id 并非字面 "central"，
+          # 诊断会打印真实 id 列表。用 if ! 包裹以在 set -euo pipefail 下捕获非零退出并落诊断。
+          if ! BEARER="$(printf '%s' "${MAVEN_SETTINGS_BASE64}" | base64 -d | python3 -c '
+          import sys, base64, xml.etree.ElementTree as ET
+          root = ET.fromstring(sys.stdin.read())
+          def loc(t): return t.split("}")[-1]
+          servers = {}
+          for node in root.iter():
+              if loc(node.tag) == "server":
+                  fields = {loc(c.tag): (c.text or "").strip() for c in node}
+                  servers[fields.get("id")] = fields
+          if "central" not in servers:
+              known = ", ".join(k for k in servers if k)
+              sys.stderr.write("settings.xml 无 id=central 的 server；现有 server id: [" + known + "]\n")
+              sys.exit(3)
+          user = servers["central"].get("username")
+          pwd = servers["central"].get("password")
+          if not user or not pwd:
+              sys.stderr.write("central server 缺 username 或 password\n")
+              sys.exit(4)
+          print(base64.b64encode(f"{user}:{pwd}".encode()).decode())
+          ')"; then
+            echo "::error::未能从 settings.xml 提取 central 凭据（详见上方 python 诊断行：命名空间/server id/字段缺失）"
+            exit 1
+          fi
+          test -n "${BEARER}" || { echo "::error::BEARER 解析结果为空"; exit 1; }
+          # 修正两处 Central Publisher Portal API 契约错误（旧值让服务端返回 4xx，
+          # 被 curl -f 折算成退出码 22）：
+          #   1) multipart 字段名必须是 bundle（原 file= 服务端不识别）
+          #   2) publishingType 合法枚举仅 AUTOMATIC / USER_MANAGED（原 AUTO_PUBLISH 非法）；
+          #      本流水线要自动发布并轮询至 PUBLISHED，取 AUTOMATIC
+          # 并弃用 -f：显式捕获 http_code 与响应体，任何非 2xx 都能看到 Central 真实报错
+          UPLOAD_RESP="$(mktemp)"
+          UPLOAD_CODE="$(curl -sS -o "${UPLOAD_RESP}" -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer ${BEARER}" \
+            -F "bundle=@central-bundle.zip" \
+            "https://central.sonatype.com/api/v1/publisher/upload?name=${DEPLOYMENT_NAME}&publishingType=AUTOMATIC")"
+          echo "upload HTTP ${UPLOAD_CODE}"
+          UPLOAD_BODY="$(tr -d '\r\n' < "${UPLOAD_RESP}")"
+          echo "upload response: ${UPLOAD_BODY}"
+          case "${UPLOAD_CODE}" in
+            2*) : ;;
+            *)
+              # 幂等：版本已发布/重复上传时 Central 返回 4xx，识别关键字当作成功跳过，
+              # 避免重跑同一 tag 时因“版本已存在”硬失败
+              if printf '%s' "${UPLOAD_BODY}" | grep -qiE 'already (been )?(published|deployed)|duplicate|already exists'; then
+                echo "::warning::版本 ${VERSION} 疑似已发布，跳过重复上传（幂等）"
+                exit 0
+              fi
+              echo "::error::Central 上传失败（HTTP ${UPLOAD_CODE}），响应体见上"; exit 1 ;;
+          esac
+          DEPLOYMENT_ID="$(printf '%s' "${UPLOAD_BODY}" | tr -d '\"[:space:]')"
+          echo "deployment id: ${DEPLOYMENT_ID}"
+          test -n "${DEPLOYMENT_ID}" || { echo "::error::上传未返回 deploymentId"; exit 1; }
+          # 轮询：status 端点是 POST（GET 会 405 → 解析不到 deploymentState）。
+          # 指数退避（15s 起、×1.5、封顶 120s），总窗口 PUBLISH_TIMEOUT_MIN 分钟；
+          # 区分终态：PUBLISHED=成功、FAILED/REJECTED=硬失败、其余(VALIDATING/VALIDATED/
+          # PUBLISHING/空)=进行中→继续轮询。到窗口仍未 PUBLISHED：默认仅告警不失败
+          # （AUTOMATIC 下校验通过即会最终发布，不让 Central 不确定的发布延迟拖红下游），
+          # 要“必须确认到 PUBLISHED 才算成功”把 FAIL_ON_TIMEOUT 设为 true。
+          STATUS_RESP="$(mktemp)"
+          deadline=$(( $(date +%s) + ${PUBLISH_TIMEOUT_MIN} * 60 ))
+          sleep_s=15
+          i=0
+          STATE=""
+          while :; do
+            i=$(( i + 1 ))
+            STATUS_CODE="$(curl -sS -o "${STATUS_RESP}" -w '%{http_code}' -X POST \
+              -H "Authorization: Bearer ${BEARER}" \
+              "https://central.sonatype.com/api/v1/publisher/status?id=${DEPLOYMENT_ID}" || true)"
+            STATUS_JSON="$(cat "${STATUS_RESP}")"
+            STATE="$(printf '%s' "${STATUS_JSON}" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("deploymentState",""))' 2>/dev/null || true)"
+            echo "[poll ${i}] http=${STATUS_CODE} state=${STATE}"
+            if [ -z "${STATE}" ]; then echo "  原始响应: $(printf '%s' "${STATUS_JSON}" | head -c 400)"; fi
+            case "${STATE}" in
+              PUBLISHED) echo "✅ PUBLISHED"; exit 0 ;;
+              FAILED|REJECTED)
+                echo "::error::Central 校验/发布失败"
+                printf '%s\n' "${STATUS_JSON}"
+                exit 1 ;;
+            esac
+            now=$(( $(date +%s) ))
+            if [ "${now}" -ge "${deadline}" ]; then break; fi
+            if [ "${sleep_s}" -lt 120 ]; then sleep_s=$(( sleep_s * 3 / 2 )); fi
+            remain=$(( deadline - $(date +%s) ))
+            if [ "${remain}" -le 0 ]; then break; fi
+            sleep $(( sleep_s < remain ? sleep_s : remain ))
+          done
+          echo "::warning::在 ${PUBLISH_TIMEOUT_MIN} 分钟内未确认到 PUBLISHED（最后状态 ${STATE:-未知}）。deployment ${DEPLOYMENT_ID} 大概率仍在 PUBLISHING，Central 会自动完成发布——请到 Central Portal 核对。"
+          {
+            echo "### Central 发布未在窗口内确认到 PUBLISHED"
+            echo "- deploymentId: \`${DEPLOYMENT_ID}\`"
+            echo "- name: \`${DEPLOYMENT_NAME}\` · 最后状态: \`${STATE:-未知}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${FAIL_ON_TIMEOUT}" = "true" ]; then exit 1; fi
+  github-release:
+    name: "Create GitHub Release"
+    needs: [publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: "Create GitHub Release with generated notes"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.ref_name }}
+        # 块标量：同 stage 的 install，plain 标量折叠换行会让 bash 产生 " " 空词参数
+        run: |
+          # 幂等：同一 tag 重跑时 Release 可能已由上一次 run 创建，直接 create 会 HTTP 422
+          # “Release.tag_name already exists”。先探测，存在即跳过（如需刷新说明可改用 gh release edit）。
+          if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
+            echo "GitHub Release ${TAG_NAME} 已存在，跳过创建"
+          else
+            gh release create "${TAG_NAME}" --verify-tag --generate-notes \
+                --title "muyi-framework ${TAG_NAME}"
+          fi
+  # 文档站联动：workflow_call 直调 deploy-docs（同步依赖链，替代原
+  # gh workflow run + sleep 10 异步派发——事件竞态与静默失败窗口一并消除）
+  trigger-docs:
+    name: "Deploy docs site"
+    needs: [github-release]
+    uses: ./.github/workflows/deploy-docs.yml
+    # 嵌套 workflow 的权限上限由调用方授予，且显式声明后按精确集合发放：
+    # deploy-docs 顶层要 contents: read，deploy job 另要 pages: write + id-token: write
+    # （deploy-pages 动作硬要求），三样缺一即校验期拒绝
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+  bump-revision:
+    name: "Bump revision on main"
+    # stage 需显式列入 needs：bump-revision 引用 needs.stage.outputs.version，
+    # 仅靠 publish 的传递依赖拿不到 stage 的 needs 上下文（outputs 取值恒为空，
+    # 否则版本号会被 bump 成空 SNAPSHOT 串污染 main）
+    needs: [stage, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          # 用 PAT 检出并持久化凭据：随后 git push origin main 即以该 PAT 身份推送，
+          # 命中 main ruleset 的 bypass 名单，绕过 require-PR/required-checks
+          # （GITHUB_TOKEN 直推受保护 main 会 GH013）。PAT 需 Contents:R/W 且其账号在 bypass 名单。
+          token: ${{ secrets.RELEASE_BOT_TOKEN }}
+          persist-credentials: true
+
+      - name: "Bump revision and example versions"
+        env:
+          VERSION: ${{ needs.stage.outputs.version }}
+        run: |
+          set -euo pipefail
+          NEXT="$(echo "${VERSION}" | awk -F. '{printf "%d.%d.%d", $1, $2, $3+1}')-SNAPSHOT"
+          CURRENT="$(sed -n 's/.*<revision>\(.*\)<\/revision>.*/\1/p' pom.xml | head -1 | tr -d '[:space:]')"
+          if [ "${CURRENT}" = "${NEXT}" ]; then
+            echo "Revision already ${NEXT}, nothing to do"
+            exit 0
+          fi
+          echo "Bumping ${CURRENT} -> ${NEXT} (from tag v${VERSION})"
+          # sed 模式串转义：版本号里的 `.` 是正则通配符，逐点转义后精确匹配
+          # （值有 semver 对账前置，转义属纵深防御）
+          CURRENT_PATTERN="$(printf '%s' "${CURRENT}" | sed 's/\./\\./g')"
+          grep -rl --include='pom.xml' --include='README.md' -F "${CURRENT}" . \
+            | xargs sed -i "s/${CURRENT_PATTERN}/${NEXT}/g"
+      - name: "Commit and push"
+        # 推送走 RELEASE_BOT_TOKEN（fine-grained PAT）：上一步 checkout 已把该 PAT 持久化为
+        # origin 凭据，故 git push 以 PAT 身份进行。main 的 Ruleset 要求“必须走 PR + 必需检查”，
+        # 直推本会 GH013；PAT 所属账号已加入该 Ruleset 的 Bypass list，故可直推。
+        # 用 PAT（而非 GITHUB_TOKEN）推送仍属 GitHub 防工作流循环设计——不触发任何 workflow
+        # （CI/门禁均不跑）；bump commit 只改版本字面量、无代码语义，风险由发布全链验证兜底。
+        # 前置依赖：① PAT 有本仓 Contents:R/W；② PAT 账号在 main 每条 Ruleset 的 bypass 名单；
+        #          ③ secret RELEASE_BOT_TOKEN 已在 Settings→Secrets→Actions 配置。
+        env:
+          VERSION: ${{ needs.stage.outputs.version }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          NEXT="$(echo "${VERSION}" | awk -F. '{printf "%d.%d.%d", $1, $2, $3+1}')-SNAPSHOT"
+          git commit -am "chore(release): bump revision to ${NEXT} after v${VERSION} release"
+          git push origin main

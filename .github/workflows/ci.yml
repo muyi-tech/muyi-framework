@@ -1,0 +1,30 @@
+name: CI
+
+# main 分支推送的质量门禁：只测试，不发布（实现单源见 _quality-gate.yml）。
+# 发布由 deploy-snapshot.yml（SNAPSHOT）与 release.yml（tag 正式版）承担。
+
+on:
+  push:
+    branches: [main]
+
+# main 连续 push 排队跑完不互砍（每份代码都有完整验证记录；
+# SNAPSHOT 发布由 workflow_run 按各自 run 结论把关）
+concurrency:
+  group: ci-main
+  cancel-in-progress: false
+
+# 最小权限：本 workflow 只读检出与构建测试，不写仓库
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: "Quality Gate"
+    uses: ./.github/workflows/_quality-gate.yml
+    # 最小权限收敛：不再 secrets: inherit（那会把仓库全部 secret 灌进复用 workflow），
+    # 只显式传 quality-gate 真正引用的 CODECOV_TOKEN；不传则 main push 覆盖率上传静默降级。
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    with:
+      codecov-mode: push
+      artifact-suffix: ci

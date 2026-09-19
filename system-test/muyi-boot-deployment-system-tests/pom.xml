@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 部署系统测试（对标 spring-boot 的 system/deployment tests）：
+         把示例应用打成可执行 jar，用真实 JVM 进程（java -jar）启动，
+         通过 HTTP 验证运行时行为——与 mock 型 @SpringBootTest 互补的最后一层验证。
+         独立于根聚合：不进默认构建、不进发布链，由独立 workflow（system-tests.yml）触发。 -->
+    <parent>
+        <groupId>io.github.muyi-tech.boot</groupId>
+        <artifactId>muyi-boot-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>io.github.muyi-tech.boot</groupId>
+    <artifactId>muyi-boot-deployment-system-tests</artifactId>
+    <packaging>jar</packaging>
+    <name>Muyi System Tests</name>
+    <description>部署系统测试：以真实进程启动示例应用的可执行 jar 并验证运行时行为</description>
+
+    <properties>
+        <!-- 被测示例应用版本；发布后由 release.yml 的 bump-revision 全仓库替换自动 bump -->
+        <examples.version>0.1.0-SNAPSHOT</examples.version>
+    </properties>
+
+    <dependencies>
+        <!-- 测试框架（版本由 parent 继承的 BOM 统一管理） -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- JSON 结构断言（Jackson 3，版本由 parent 继承的 BOM 统一管理） -->
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 把两个示例应用的可执行 jar（spring-boot repackage 产物）从本地仓库
+                 复制到 target/system-test-jars/，测试用 java -jar 直接启动 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-example-jars</id>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <phase>generate-test-resources</phase>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>com.example.muyi</groupId>
+                                    <artifactId>muyi-boot-smoke-test-parent-inheritance</artifactId>
+                                    <version>${examples.version}</version>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>com.example.muyi</groupId>
+                                    <artifactId>muyi-boot-smoke-test-webflux</artifactId>
+                                    <version>${examples.version}</version>
+                                </artifactItem>
+                            </artifactItems>
+                            <outputDirectory>${project.build.directory}/system-test-jars</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

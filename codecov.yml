@@ -1,0 +1,41 @@
+# Codecov 配置
+# 参考：https://docs.codecov.com/docs/codecovyml-reference
+# 生效后 PR 上会出现 codecov/project 与 codecov/patch 两项检查 + 覆盖率评论
+
+codecov:
+  require_ci_to_pass: yes # 等其余 CI 状态通过后，Codecov 再发自己的状态
+
+# PR 评论（覆盖率报告）
+comment:
+  layout: "reach, diff, flags, files" # 评论包含的板块
+  behavior: default # default: 每次更新都评论；once: 仅首次；new: 每次发新评论
+  require_changes: false # false: 覆盖率无变化也发评论
+
+# 覆盖率状态检查
+coverage:
+  precision: 2
+  round: down
+  range: "70...100" # 仅影响徽章配色，不参与通过与失败的判定
+
+  status:
+    # 整体覆盖率（GitHub 上显示为 codecov/project）
+    project:
+      default:
+        target: 90% # 绝对阈值：整体覆盖率需达到 90%（含 1% 容差即 89%）
+        threshold: 1%
+        if_ci_failed: error # CI 失败时该检查置为 error
+
+    # 本次改动代码的覆盖率（显示为 codecov/patch）
+    patch:
+      default:
+        target: 90% # 新增/修改代码需达到 90%
+        threshold: 5% # 改动行数少时波动大，给 5% 容差
+        if_ci_failed: error
+
+# 在 PR 的 Files changed 页标注未覆盖行
+github_checks:
+  annotations: true
+
+# 示例模块不参与主构建，排除统计
+ignore:
+  - "smoke-test/**/*"

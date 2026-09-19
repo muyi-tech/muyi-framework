@@ -1,0 +1,46 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+.flattened-pom.xml
+
+### 文档站构建产物（mkdocs build 输出，部署由 CI 完成） ###
+documentation/muyi-boot-docs/site/
+
+### 本地发布凭据（settings.xml 含真实 Central Token / passphrase，禁止提交；
+### 发布 runbook 见仓库根 PUBLISHING.md，仅含占位符可公开） ###
+settings.xml
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Agent 工作日记（本地备忘，不入库） ###
+memory/
+
+### Mac OS ###
+.DS_Store

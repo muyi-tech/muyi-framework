@@ -1,0 +1,56 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # 周报全量扫描：仓库私有期间禁用（schedule 事件 payload 无 repository 对象，
+  # 无法在 job if 中按可见性过滤，会绕过下方 private 判断）；
+  # 仓库开源后恢复以下触发：
+  # schedule:
+  #   - cron: "0 22 * * 6" # UTC 22:00 = 北京时间周日凌晨 06:00，每周全量扫描
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    name: "Analyze (${{ matrix.language }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # 私有仓库未启用 Advanced Security（GHAS），SARIF 上传必然失败；
+    # 公开仓库 code scanning 免费，开源后此条件自动放行
+    if: github.event.repository.private != true
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [java-kotlin]
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # 走 composite 单一构建环境定义（JDK 21 + Temurin + Maven 缓存 + MAVEN_OPTS），
+      # 与 _quality-gate.yml build job 同源，避免 JDK/缓存配置双份漂移
+      - name: "Set up Build Environment"
+        uses: ./.github/actions/setup-build
+
+      - name: "Initialize CodeQL"
+        uses: github/codeql-action/init@311b4ee155dcdab395044f00946f664bd51ff173 # v4
+        with:
+          languages: ${{ matrix.language }}
+          # security-extended：默认安全查询 + 扩展查询集（更严格）
+          # 如误报较多可降级为默认，删除 queries 一行即可
+          queries: security-extended
+
+      # CodeQL autobuild 会自动调用 Maven 编译（-B compile），
+      # 不会执行测试，因此比 _quality-gate.yml 的 build job 更快
+      - name: "Build"
+        uses: github/codeql-action/autobuild@311b4ee155dcdab395044f00946f664bd51ff173 # v4
+
+      - name: "Perform CodeQL Analysis"
+        uses: github/codeql-action/analyze@311b4ee155dcdab395044f00946f664bd51ff173 # v4
+        with:
+          category: "/language:${{ matrix.language }}"
