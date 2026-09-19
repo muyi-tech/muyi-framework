@@ -6,10 +6,30 @@
 
 统一的依赖管理（BOM）· 构建规范（Parent）· 通用组件（Commons）· 起步依赖（Starter）
 
-<a href="https://central.sonatype.com/artifact/io.github.muyi-tech.boot/muyi-boot-dependencies"><img src="https://img.shields.io/maven-central/v/io.github.muyi-tech.boot/muyi-boot-dependencies?color=green&style=flat-square" alt="Maven Central" /></a>
-[![codecov](https://codecov.io/gh/muyi-tech/muyi-framework/branch/main/graph/badge.svg)](https://codecov.io/gh/muyi-tech/muyi-framework)
-[![Java](https://img.shields.io/badge/Java-21-orange?style=flat-square)](https://adoptium.net/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](LICENSE)
+<a href="https://central.sonatype.com/artifact/io.github.muyi-tech.boot/muyi-boot-dependencies">
+    <img
+        src="https://img.shields.io/maven-central/v/io.github.muyi-tech.boot/muyi-boot-dependencies?color=green&style=flat-square"
+        alt="Maven Central"
+    />
+</a>
+<a href="https://codecov.io/gh/muyi-tech/muyi-framework">
+    <img
+        src="https://codecov.io/gh/muyi-tech/muyi-framework/branch/main/graph/badge.svg"
+        alt="codecov"
+    />
+</a>
+<a href="https://adoptium.net/">
+    <img
+        src="https://img.shields.io/badge/Java-21-orange?style=flat-square"
+        alt="Java 21"
+    />
+</a>
+<a href="./LICENSE">
+    <img
+        src="https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square"
+        alt="License Apache 2.0"
+    />
+</a>
 
 </div>
 
