@@ -21,6 +21,8 @@ header:
     - '**/.gitignore'
     - '**/.editorconfig'
     - '**/.gitattributes'
+    # git hook 是本地开发工具脚本（与 .gitignore/.gitattributes 同类工程配套文件），豁免版权头
+    - '**/.githooks/**'
     - '**/.licenserc.yaml'
     - '**/.github/**'
     - '**/.idea/**'
