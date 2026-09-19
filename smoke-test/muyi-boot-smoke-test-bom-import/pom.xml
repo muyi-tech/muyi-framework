@@ -14,7 +14,7 @@
 
     <groupId>com.example.muyi</groupId>
     <artifactId>muyi-boot-smoke-test-bom-import</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>1.0.1-SNAPSHOT</version>
     <name>Muyi Boot Smoke Test - BOM Import</name>
     <description>示例二：仅导入 muyi-boot-dependencies BOM 接入 Muyi Framework（已有父级时）</description>
 
@@ -24,7 +24,7 @@
             <dependency>
                 <groupId>io.github.muyi-tech.boot</groupId>
                 <artifactId>muyi-boot-dependencies</artifactId>
-                <version>0.1.0-SNAPSHOT</version>
+                <version>1.0.1-SNAPSHOT</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -46,7 +46,7 @@
         </dependency>
     </dependencies>
 
-    <!-- 框架当前为 0.1.0-SNAPSHOT，需配置 Central 快照仓库；正式版发布后移除本段即可 -->
+    <!-- 框架当前为 1.0.1-SNAPSHOT，需配置 Central 快照仓库；正式版发布后移除本段即可 -->
     <repositories>
         <repository>
             <id>central-snapshots</id>

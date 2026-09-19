@@ -146,6 +146,17 @@ SNAPSHOT 需在项目显式声明仓库：
 </repositories>
 ```
 
+## 🛠 本地开发
+
+**Git hook 安装（clone 后执行一次）**：启用提交前版本对齐校验（smoke-test / system-test 的硬编码版本必须与根 pom `<revision>` 一致，防止版本脱节）：
+
+```bash
+git config core.hooksPath .githooks
+```
+
+- 手动 bump 主版本后运行 `bash scripts/align-versions.sh` 一键对齐（`release.yml` 发布链的 bump-revision 也会自动全仓库替换）。
+- CI 侧由 `_quality-gate.yml` 的 `version-guard` job 兜底（hook 可被 `--no-verify` 绕过，bot 直推不经过本地 hook）。
+
 ## ⭐ Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=muyi-tech/muyi-framework&type=Date)](https://star-history.com/#muyi-tech/muyi-framework&Date)

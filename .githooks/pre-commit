@@ -1,0 +1,8 @@
+#!/bin/sh
+# pre-commit — 提交前校验 smoke-test / system-test 版本与根 pom <revision> 对齐
+#
+# 安装（clone 后执行一次）：
+#   git config core.hooksPath .githooks
+# 临时跳过（不推荐，CI 的 version-guard 兜底仍会拦截）：
+#   git commit --no-verify
+exec bash "$(git rev-parse --show-toplevel)/scripts/check-version-align.sh"

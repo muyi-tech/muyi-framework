@@ -49,6 +49,21 @@ jobs:
           config: .licenserc.yaml
           mode: check
 
+  # 版本防脱节护栏：smoke-test / system-test 独立于根聚合（外部消费者模拟），
+  # 其 pom 的 parent version / BOM import version / 自身 version / examples.version
+  # 必须是硬编码字面量（Maven 属性不跨 reactor），靠本 job 校验与根 pom <revision> 一致。
+  # 与 .githooks/pre-commit 跑同一脚本（单一事实来源）；hook 可被 --no-verify 绕过、
+  # bot 直推 main 亦不经过本地 hook，故 CI 兜底必留。
+  version-guard:
+    name: "Version Alignment Guard"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: "Check smoke/system-test versions match <revision>"
+        run: bash scripts/check-version-align.sh
+
   build:
     name: "Build on ${{ matrix.os }}"
     runs-on: ${{ matrix.os }}
