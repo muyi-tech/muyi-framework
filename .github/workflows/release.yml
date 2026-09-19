@@ -500,3 +500,53 @@ jobs:
           NEXT="$(echo "${VERSION}" | awk -F. '{printf "%d.%d.%d", $1, $2, $3+1}')-SNAPSHOT"
           git commit -am "chore(release): bump revision to ${NEXT} after v${VERSION} release"
           git push origin main
+
+  # README 快速开始示例的版本自动对齐：发布完成后把示例 pom 的
+  # <version>${latest.version}</version>（首次）或上一 release 版本字面量（后续）
+  # 统一改写为本次发布版本，保证 README 永远指向最新正式版。
+  # 语义区分：README = 最新 release 正式版；<revision> = 开发 SNAPSHOT，
+  # 两者独立演进——bump-revision 的 grep -F 只匹配 -SNAPSHOT 字面量，不会误碰 README。
+  # 串行在 bump-revision 之后：两个 bot job 都直推 main，避免并发 push 竞争。
+  update-readme:
+    name: "Update README latest.version"
+    needs: [stage, github-release, bump-revision]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          # 同 bump-revision：PAT 持久化为 origin 凭据直推 main（命中 ruleset bypass 名单），
+          # GITHUB_TOKEN 直推会 GH013；PAT 推送不触发任何 workflow（防循环）
+          token: ${{ secrets.RELEASE_BOT_TOKEN }}
+          persist-credentials: true
+
+      - name: "Point README examples at the released version"
+        env:
+          VERSION: ${{ needs.stage.outputs.version }}
+        run: |
+          set -euo pipefail
+          # -0777 slurp + \s* 跨行匹配 artifactId 与 version 两行；[^<]+ 同时覆盖
+          # ${latest.version} 占位符（首次发布）与上一 release 字面量（后续发布）。
+          # 版本经 stage 的 semver 对账，经 ENV 传入替换侧，无 shell 注入面。
+          perl -0777 -pi -e 's/(<artifactId>muyi-boot-(?:parent|dependencies)<\/artifactId>\s*<version>)[^<]+(<\/version>)/${1}$ENV{VERSION}${2}/g' README.md
+          if ! grep -q -- "${VERSION}" README.md; then
+            echo "::error::README 替换后未找到版本 ${VERSION}，请人工检查示例结构是否变化"
+            exit 1
+          fi
+
+      - name: "Commit and push"
+        env:
+          VERSION: ${{ needs.stage.outputs.version }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -am "docs: point README examples at ${VERSION}"
+          git push origin main
