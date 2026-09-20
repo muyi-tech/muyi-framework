@@ -118,7 +118,7 @@ jobs:
       # main push：Codecov 服务抖动不阻断发布链路（SNAPSHOT 由 workflow_run 把关）
       - name: "Upload coverage to Codecov (push)"
         if: runner.os == 'Linux' && inputs.codecov-mode == 'push'
-        uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45 # v5
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
@@ -128,7 +128,7 @@ jobs:
       # fail 严格度按来源分级：内部 PR 上传失败必红，fork 尽力而为不阻断贡献流程
       - name: "Upload coverage to Codecov (PR)"
         if: runner.os == 'Linux' && inputs.codecov-mode == 'pr'
-        uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45 # v5
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           # 显式绑定 PR 号：覆盖率归属到 PR 所在分支，而不是落到 main 上
