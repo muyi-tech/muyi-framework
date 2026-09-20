@@ -9,7 +9,7 @@
     <parent>
         <groupId>io.github.muyi-tech.boot</groupId>
         <artifactId>muyi-boot-parent</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.0.2-SNAPSHOT</version>
         <relativePath/>
     </parent>
 
@@ -21,7 +21,7 @@
 
     <properties>
         <!-- 被测示例应用版本；发布后由 release.yml 的 bump-revision 全仓库替换自动 bump -->
-        <examples.version>1.0.1-SNAPSHOT</examples.version>
+        <examples.version>1.0.2-SNAPSHOT</examples.version>
     </properties>
 
     <dependencies>
