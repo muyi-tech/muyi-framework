@@ -7,13 +7,13 @@
     <parent>
         <groupId>io.github.muyi-tech.boot</groupId>
         <artifactId>muyi-boot-parent</artifactId>
-        <version>1.0.2-SNAPSHOT</version>
+        <version>1.0.3-SNAPSHOT</version>
         <relativePath/>
     </parent>
 
     <groupId>com.example.muyi</groupId>
     <artifactId>muyi-boot-smoke-test-parent-inheritance</artifactId>
-    <version>1.0.2-SNAPSHOT</version>
+    <version>1.0.3-SNAPSHOT</version>
     <name>Muyi Boot Smoke Test - Parent Inheritance</name>
     <description>示例一：继承 muyi-boot-parent 接入 Muyi Framework（推荐业务应用方式）</description>
 
@@ -32,7 +32,7 @@
         </dependency>
     </dependencies>
 
-    <!-- 框架当前为 1.0.2-SNAPSHOT，需配置 Central 快照仓库；正式版发布后移除本段即可 -->
+    <!-- 框架当前为 1.0.3-SNAPSHOT，需配置 Central 快照仓库；正式版发布后移除本段即可 -->
     <repositories>
         <repository>
             <releases>
