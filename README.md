@@ -90,7 +90,7 @@ muyi-framework
 <parent>
     <groupId>io.github.muyi-tech.boot</groupId>
     <artifactId>muyi-boot-parent</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <relativePath/>
 </parent>
 
@@ -114,7 +114,7 @@ muyi-framework
         <dependency>
             <groupId>io.github.muyi-tech.boot</groupId>
             <artifactId>muyi-boot-dependencies</artifactId>
-            <version>1.0.1</version>
+            <version>1.0.2</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
