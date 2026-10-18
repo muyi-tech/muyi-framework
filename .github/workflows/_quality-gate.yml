@@ -42,7 +42,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "Check Dependencies' License"
-        uses: apache/skywalking-eyes/dependency@ab3d1fe50d23f9c82eff489297167e2dde8ba6cb
+        uses: apache/skywalking-eyes/dependency@7f98a36a3cbbb2b876b6a05ddc24315b82c77737
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
