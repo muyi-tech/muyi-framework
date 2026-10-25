@@ -16,7 +16,7 @@
     <!-- 依赖版本：由 BOM 自身持有（对标 Spring Boot 官方 spring-boot-dependencies），
          配合聚合根的 flatten resolveCiFriendliesOnly，发布后 BOM 自包含、可独立 import -->
     <properties>
-        <spring-boot.version>4.1.1</spring-boot.version>
+        <spring-boot.version>4.1.2</spring-boot.version>
 
         <commons-collections4.version>4.6.0</commons-collections4.version>
     </properties>
