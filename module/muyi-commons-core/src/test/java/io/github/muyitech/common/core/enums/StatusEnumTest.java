@@ -36,28 +36,28 @@ class StatusEnumTest {
 
     @Test
     void statusAndDesc_matchesDefinition() {
-        assertEquals(0, StatusEnum.ENABLE.getCode());
+        assertEquals(1, StatusEnum.ENABLE.getCode());
         assertEquals("开启", StatusEnum.ENABLE.getDesc());
-        assertEquals(1, StatusEnum.DISABLE.getCode());
+        assertEquals(0, StatusEnum.DISABLE.getCode());
         assertEquals("关闭", StatusEnum.DISABLE.getDesc());
     }
 
     @Test
     void array_matchesStatusOrder() {
-        assertArrayEquals(new Integer[] {0, 1}, StatusEnum.ENABLE.array());
+        assertArrayEquals(new Integer[] {1, 0}, StatusEnum.ENABLE.array());
     }
 
     @Test
     void array_returnsDefensiveCopy() {
         Integer[] first = StatusEnum.ENABLE.array();
         first[0] = 99;
-        assertArrayEquals(new Integer[] {0, 1}, StatusEnum.ENABLE.array());
+        assertArrayEquals(new Integer[] {1, 0}, StatusEnum.ENABLE.array());
     }
 
     @Test
     void getEnum_found() {
-        assertEquals(StatusEnum.ENABLE, StatusEnum.getEnum(0));
-        assertEquals(StatusEnum.DISABLE, StatusEnum.getEnum(1));
+        assertEquals(StatusEnum.ENABLE, StatusEnum.getEnum(1));
+        assertEquals(StatusEnum.DISABLE, StatusEnum.getEnum(0));
     }
 
     @Test
@@ -72,15 +72,15 @@ class StatusEnumTest {
 
     @Test
     void isEnable() {
-        assertTrue(StatusEnum.isEnable(0));
-        assertFalse(StatusEnum.isEnable(1));
+        assertTrue(StatusEnum.isEnable(1));
+        assertFalse(StatusEnum.isEnable(0));
         assertFalse(StatusEnum.isEnable(null));
     }
 
     @Test
     void isDisable() {
-        assertTrue(StatusEnum.isDisable(1));
-        assertFalse(StatusEnum.isDisable(0));
+        assertTrue(StatusEnum.isDisable(0));
+        assertFalse(StatusEnum.isDisable(1));
         assertFalse(StatusEnum.isDisable(null));
     }
 
@@ -88,7 +88,7 @@ class StatusEnumTest {
     void toString_containsNameCodeAndDesc() {
         String text = StatusEnum.ENABLE.toString();
         assertTrue(text.contains("StatusEnum.ENABLE"));
-        assertTrue(text.contains("code=0"));
+        assertTrue(text.contains("code=1"));
         assertTrue(text.contains("desc=开启"));
     }
 }

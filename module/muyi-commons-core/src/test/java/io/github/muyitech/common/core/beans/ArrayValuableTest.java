@@ -29,6 +29,6 @@ class ArrayValuableTest {
     @Test
     void array_returnsAllEnumValues() {
         assertArrayEquals(new Integer[] {1, 0}, DeletedEnum.YES.array());
-        assertArrayEquals(new Integer[] {0, 1}, StatusEnum.ENABLE.array());
+        assertArrayEquals(new Integer[] {1, 0}, StatusEnum.ENABLE.array());
     }
 }

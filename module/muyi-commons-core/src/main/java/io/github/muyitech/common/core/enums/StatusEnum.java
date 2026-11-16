@@ -23,7 +23,7 @@ import java.util.Objects;
  * 通用状态枚举。
  *
  * <p>
- * 约定 {@code 0} 表示开启、{@code 1} 表示关闭，用于实体启停状态的存储与展示。
+ * 约定 {@code 1} 表示开启、{@code 0} 表示关闭，用于实体启停状态的存储与展示。
  *
  * @author keep simple
  * @since 2025/4/7
@@ -33,11 +33,11 @@ public enum StatusEnum implements ArrayValuable<Integer> {
     /**
      * 开启.
      */
-    ENABLE(0, "开启"),
+    ENABLE(1, "开启"),
     /**
      * 关闭.
      */
-    DISABLE(1, "关闭");
+    DISABLE(0, "关闭");
 
     private static final Integer[] ARRAYS =
             Arrays.stream(values()).map(StatusEnum::getCode).toArray(Integer[]::new);
